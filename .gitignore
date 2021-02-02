@@ -22,3 +22,4 @@ media/
 
 db.sqlite3
 /my_logger.log
+.env

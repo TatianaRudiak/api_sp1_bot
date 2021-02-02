@@ -3,7 +3,6 @@ import os
 import time
 
 import requests
-from dotenv import load_dotenv
 from telegram import Bot
 
 logging.basicConfig(
@@ -12,8 +11,6 @@ logging.basicConfig(
     filemode='w',
     format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
 )
-
-load_dotenv()
 
 
 PRAKTIKUM_TOKEN = os.getenv("PRAKTIKUM_TOKEN")
@@ -81,9 +78,8 @@ def main():
         else:
             try:
                 new_homework = homeworks_list[0]
-            except IndexError:
+            except IndexError:                          # нет новых домашних работ
                 logging.error(IndexError, exc_info=True)
-                send_message(f'Бот столкнулся с ошибкой: {IndexError}', bot)
             else:
                 send_message(parse_homework_status(new_homework), bot)
             finally:
