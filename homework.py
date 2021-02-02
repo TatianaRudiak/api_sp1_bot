@@ -78,7 +78,7 @@ def main():
         else:
             try:
                 new_homework = homeworks_list[0]
-            except IndexError:                          # нет новых домашних работ
+            except IndexError:          # нет новых домашних работ
                 logging.error(IndexError, exc_info=True)
             else:
                 send_message(parse_homework_status(new_homework), bot)
