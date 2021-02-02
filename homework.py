@@ -4,9 +4,7 @@ import time
 
 import requests
 from telegram import Bot
-from flask import Flask
 
-app = Flask(__name__)
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -66,7 +64,6 @@ def get_homework_statuses(current_timestamp):
         return homework_statuses.json()
 
 
-@app.route('/')
 def main():
     bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())  # начальное значение timestamp
@@ -97,6 +94,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # Bind to PORT if defined, otherwise default to 5000.
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
