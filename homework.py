@@ -26,21 +26,19 @@ def parse_homework_status(homework):
     except KeyError:
         logging.error(KeyError, exc_info=True)
         return f'Бот столкнулся с ошибкой: {KeyError}'
-    else:
-        try:
-            homework_status = homework['status']
-        except KeyError:
-            logging.error(KeyError, exc_info=True)
-            return f'Бот столкнулся с ошибкой: {KeyError}'
-        else:
-            if homework_status == 'rejected':
-                verdict = 'К сожалению в работе нашлись ошибки.'
-            else:
-                verdict = (
-                    'Ревьюеру всё понравилось, '
-                    'можно приступать к следующему уроку.'
-                )
-            return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
+    try:
+        homework_status = homework['status']
+    except KeyError:
+        logging.error(KeyError, exc_info=True)
+        return f'Бот столкнулся с ошибкой: {KeyError}'
+    if homework_status == 'rejected':
+        verdict = 'К сожалению в работе нашлись ошибки.'
+    elif homework_status == 'approved':
+        verdict = (
+            'Ревьюеру всё понравилось, ' 
+            'можно приступать к следующему уроку.'
+        )
+    return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
 
 
 def send_message(message, bot_client):
@@ -56,9 +54,9 @@ def get_homework_statuses(current_timestamp):
     }
     try:
         response = requests.get(API_URL, params=params, headers=headers)
-    except Exception as error:
+    except requests.RequestException as error:
         logging.error(error, exc_info=True)
-        return f'Бот столкнулся с ошибкой: {error}'
+        return {'error': error}
     else:
         homework_statuses = response
         return homework_statuses.json()
@@ -70,24 +68,30 @@ def main():
     while True:
         homework = get_homework_statuses(current_timestamp)
         try:
-            homeworks_list = homework['homeworks']
-        except TypeError:
-            send_message(f'Бот столкнулся с ошибкой: {homework}', bot)
+            error = homework['error']
         except KeyError:
-            logging.error(KeyError, exc_info=True)
-            send_message(f'Бот столкнулся с ошибкой: {KeyError}', bot)
-        else:
             try:
-                new_homework = homeworks_list[0]
-            except IndexError:          # нет новых домашних работ
-                logging.error(IndexError, exc_info=True)
+                homeworks_list = homework['homeworks']
+            except TypeError:
+                logging.error(KeyError, exc_info=True)
+                send_message(f'Бот столкнулся с ошибкой: {TypeError}', bot)
+            except KeyError:
+                logging.error(KeyError, exc_info=True)
+                send_message(f'Бот столкнулся с ошибкой: {KeyError}', bot)
             else:
-                send_message(parse_homework_status(new_homework), bot)
-            finally:
-                current_timestamp = homework.get(
-                    'current_date',
-                    current_timestamp
-                )
+                try:
+                    new_homework = homeworks_list[0]
+                except IndexError:          # нет новых домашних работ
+                    logging.error(IndexError, exc_info=True)
+                else:
+                    send_message(parse_homework_status(new_homework), bot)
+                finally:
+                    current_timestamp = homework.get(
+                        'current_date',
+                        current_timestamp
+                    )
+        else:
+            send_message(f'Бот столкнулся с ошибкой: {error}', bot)
         finally:
             time.sleep(300)
 
