@@ -102,12 +102,9 @@ def main():
         except KeyError:
             try:
                 homeworks_list = homework['homeworks']
-            except TypeError:
-                logging.error(TypeError, exc_info=True)
-                send_message(f'Бот столкнулся с ошибкой: {TypeError}', bot)
-            except KeyError:
-                logging.error(KeyError, exc_info=True)
-                send_message(f'Бот столкнулся с ошибкой: {KeyError}', bot)
+            except (TypeError, KeyError) as error:
+                logging.error(error, exc_info=True)
+                send_message(f'Бот столкнулся с ошибкой: {error}', bot)
             else:
                 try:
                     new_homework = homeworks_list[0]
