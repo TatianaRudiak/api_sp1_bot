@@ -78,12 +78,11 @@ def get_homework_statuses(current_timestamp):
                 headers=headers,
                 timeout=100
             )
-        except requests.RequestException as e:
+        except error:
             logging.error(
-                f'{e}: headers={headers} params={params}',
+                f'{error}: headers={headers} params={params}',
                 exc_info=True
             )
-            error = e
             trial_num += 1
         else:
             return homework_statuses.json()
@@ -102,22 +101,20 @@ def main():
         except KeyError:
             try:
                 homeworks_list = homework['homeworks']
+                new_homework = homeworks_list[0]
             except (TypeError, KeyError) as error:
                 logging.error(error, exc_info=True)
                 send_message(f'Бот столкнулся с ошибкой: {error}', bot)
+            # нет новых домашних работ
+            except IndexError:
+                logging.error(IndexError, exc_info=True)
             else:
-                try:
-                    new_homework = homeworks_list[0]
-                # нет новых домашних работ
-                except IndexError:
-                    logging.error(IndexError, exc_info=True)
-                else:
-                    send_message(parse_homework_status(new_homework), bot)
-                finally:
-                    current_timestamp = homework.get(
-                        'current_date',
-                        current_timestamp
-                    )
+                send_message(parse_homework_status(new_homework), bot)
+            finally:
+                current_timestamp = homework.get(
+                    'current_date',
+                    current_timestamp
+                )
         # homework_statuses.json() содержит 'errors'
         except TypeError:
             send_message(
@@ -125,7 +122,7 @@ def main():
                 bot
             )
         # Exception из get_homework_statuses
-        except requests.RequestException as error:
+        except homework['error'] as error:
             send_message(
                 f'Бот столкнулся с ошибкой: {error}. '
                 f'Бот вынужден отключится. '
