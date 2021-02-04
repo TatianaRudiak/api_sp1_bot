@@ -4,7 +4,8 @@ import time
 
 import requests
 from telegram import Bot
-
+from dotenv import load_dotenv
+load_dotenv()
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -66,14 +67,24 @@ def get_homework_statuses(current_timestamp):
     params = {
         'from_date': current_timestamp,
     }
-    try:
-        homework_statuses = requests.get(API_URL, params=params, headers=headers)
-        return homework_statuses.json()
-    except requests.RequestException as error:
-        logging.error(
-            f'{error}: headers={headers} params={params}',
-            exc_info=True
-        )
+    max_retry = 5
+    trial_num = 1
+    error = requests.RequestException
+    while trial_num <= max_retry:
+        try:
+            homework_statuses = requests.get(API_URL, params=params, headers=headers, timeout=100)
+            #homework_statuses.raise_for_status()
+        except requests.RequestException as e:
+            logging.error(
+                f'{e}: headers={headers} params={params}',
+                exc_info=True
+            )
+            error = e
+            trial_num += 1
+        else:
+            return homework_statuses.json()
+        time.sleep(300)
+    else:
         return {'error': error}
 
 
@@ -111,7 +122,13 @@ def main():
                 bot
             )
         except requests.RequestException as error:  # Exception из get_homework_statuses
-            send_message(f'Бот столкнулся с ошибкой: {error}', bot)
+            send_message(
+                f'Бот столкнулся с ошибкой: {error}. '
+                f'Бот вынужден отключится. '
+                f'После восстановления работы API потребуется перезапуск.',
+                bot
+            )
+            break
         except Exception as error:
             logging.error(f'Internal error: {error}', exc_info=True)
             send_message(
