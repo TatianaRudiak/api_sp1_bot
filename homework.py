@@ -10,7 +10,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     filename='my_logger.log',
     filemode='w',
-    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
+    format='%(asctime)s, %(levelname)s, %(funcName)s, %(message)s, %(name)s'
 )
 
 
@@ -18,6 +18,14 @@ PRAKTIKUM_TOKEN = os.getenv("PRAKTIKUM_TOKEN")
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 API_URL = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
+HOMEWORK_STATUSES = {
+    'rejected': 'К сожалению в работе нашлись ошибки.',
+    'approved': (
+        'Ревьюеру всё понравилось, '
+        'можно приступать к следующему уроку.'
+    ),
+    'reviewing': 'Работа взята в ревью.',
+}
 
 
 def parse_homework_status(homework):
@@ -31,14 +39,20 @@ def parse_homework_status(homework):
     except KeyError:
         logging.error(KeyError, exc_info=True)
         return f'Бот столкнулся с ошибкой: {KeyError}'
-    if homework_status == 'rejected':
-        verdict = 'К сожалению в работе нашлись ошибки.'
-    elif homework_status == 'approved':
-        verdict = (
-            'Ревьюеру всё понравилось, '
-            'можно приступать к следующему уроку.'
+    try:
+        return (
+            f'У вас проверили работу "{homework_name}"!\n\n'
+            f'{HOMEWORK_STATUSES[homework_status]}'
         )
-    return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
+    except KeyError:
+        logging.error(
+            f'{KeyError}: неизвестный статус проверки '
+            f'"{homework_status}"', exc_info=True
+        )
+        return (
+            f'Бот столкнулся с ошибкой: {KeyError}: '
+            f'неизвестный статус проверки "{homework_status}"'
+        )
 
 
 def send_message(message, bot_client):
@@ -53,22 +67,23 @@ def get_homework_statuses(current_timestamp):
         'from_date': current_timestamp,
     }
     try:
-        response = requests.get(API_URL, params=params, headers=headers)
-    except requests.RequestException as error:
-        logging.error(error, exc_info=True)
-        return {'error': error}
-    else:
-        homework_statuses = response
+        homework_statuses = requests.get(API_URL, params=params, headers=headers)
         return homework_statuses.json()
+    except requests.RequestException as error:
+        logging.error(
+            f'{error}: headers={headers} params={params}',
+            exc_info=True
+        )
+        return {'error': error}
 
 
 def main():
     bot = Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())  # начальное значение timestamp
+    current_timestamp = int(time.time())
     while True:
         homework = get_homework_statuses(current_timestamp)
         try:
-            error = homework['error']
+            raise homework['error']
         except KeyError:
             try:
                 homeworks_list = homework['homeworks']
@@ -81,7 +96,7 @@ def main():
             else:
                 try:
                     new_homework = homeworks_list[0]
-                except IndexError:          # нет новых домашних работ
+                except IndexError:  # нет новых домашних работ
                     logging.error(IndexError, exc_info=True)
                 else:
                     send_message(parse_homework_status(new_homework), bot)
@@ -90,8 +105,19 @@ def main():
                         'current_date',
                         current_timestamp
                     )
-        else:
+        except TypeError:   # homework_statuses.json() содержит 'errors'
+            send_message(
+                f'Бот столкнулся с ошибкой: {homework["error"]}',
+                bot
+            )
+        except requests.RequestException as error:  # Exception из get_homework_statuses
             send_message(f'Бот столкнулся с ошибкой: {error}', bot)
+        except Exception as error:
+            logging.error(f'Internal error: {error}', exc_info=True)
+            send_message(
+                f'Бот столкнулся с ошибкой: Internal error: {error}',
+                bot
+            )
         finally:
             time.sleep(300)
 
