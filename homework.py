@@ -78,7 +78,6 @@ def get_homework_statuses(current_timestamp):
                 headers=headers,
                 timeout=100
             )
-            #homework_statuses.raise_for_status()
         except requests.RequestException as e:
             logging.error(
                 f'{e}: headers={headers} params={params}',
@@ -104,7 +103,7 @@ def main():
             try:
                 homeworks_list = homework['homeworks']
             except TypeError:
-                logging.error(KeyError, exc_info=True)
+                logging.error(TypeError, exc_info=True)
                 send_message(f'Бот столкнулся с ошибкой: {TypeError}', bot)
             except KeyError:
                 logging.error(KeyError, exc_info=True)
@@ -112,7 +111,8 @@ def main():
             else:
                 try:
                     new_homework = homeworks_list[0]
-                except IndexError:  # нет новых домашних работ
+                # нет новых домашних работ
+                except IndexError:
                     logging.error(IndexError, exc_info=True)
                 else:
                     send_message(parse_homework_status(new_homework), bot)
@@ -121,12 +121,14 @@ def main():
                         'current_date',
                         current_timestamp
                     )
-        except TypeError:   # homework_statuses.json() содержит 'errors'
+        # homework_statuses.json() содержит 'errors'
+        except TypeError:
             send_message(
                 f'Бот столкнулся с ошибкой: {homework["error"]}',
                 bot
             )
-        except requests.RequestException as error:  # Exception из get_homework_statuses
+        # Exception из get_homework_statuses
+        except requests.RequestException as error:
             send_message(
                 f'Бот столкнулся с ошибкой: {error}. '
                 f'Бот вынужден отключится. '
