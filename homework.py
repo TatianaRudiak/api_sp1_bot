@@ -72,7 +72,12 @@ def get_homework_statuses(current_timestamp):
     error = requests.RequestException
     while trial_num <= max_retry:
         try:
-            homework_statuses = requests.get(API_URL, params=params, headers=headers, timeout=100)
+            homework_statuses = requests.get(
+                API_URL,
+                params=params,
+                headers=headers,
+                timeout=100
+            )
             #homework_statuses.raise_for_status()
         except requests.RequestException as e:
             logging.error(
